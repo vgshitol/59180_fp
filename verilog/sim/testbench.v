@@ -34,7 +34,7 @@ module Testbench;
 	XOODYAK dut1 (.clk(clk),.resetn(resetn),.start(start),.load(load),.xoodoo_complete(xoodoo_complete),.state_in(state_in),.msg(msg),
 		.msg_len(msg_len),.xoodoo_enable (xoodoo_enable),.state_out(state_out),.hash(hash),.hash_len(hash_len),.valid(valid));
 	
-	XOODOO dut2 (.clk(clk),.resetn(resetn),.start(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
+	XOODOO dut2 (.clk(clk),.resetn(resetn),.enable_xoodoo(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
 
 	integer i;
 		
@@ -71,7 +71,7 @@ module Testbench;
 		#(CLOCK_PERIOD);
 		start = 0;
 
-		#(500*(CLOCK_PERIOD));
+		#(2500*(CLOCK_PERIOD));
 
 		$stop;
 		
