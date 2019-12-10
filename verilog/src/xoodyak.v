@@ -75,7 +75,6 @@ module XOODYAK(
 				ABSORB:
 				begin
 					$display("ABSORB");
-					if(next_msg_len==0) curr_state <= SQUEEZE;
 					if (counter_complete == 1) curr_state <= ABSORB_DOWN;
 				end
 				ABSORB_DOWN:
@@ -91,7 +90,8 @@ module XOODYAK(
 				ABSORB_XOODOO:
 				begin
 					$display("ABSORB XOODOO");
-					if(counter_complete) curr_state <= ABSORB;		
+					if(next_msg_len==0 && counter_complete) curr_state <= SQUEEZE;
+					else if(counter_complete) curr_state <= ABSORB;		
 				end
 				SQUEEZE:
 				begin
@@ -133,9 +133,8 @@ module XOODYAK(
 		else counter <= counter;
 
 		if(curr_state == LOAD) counter_complete <= load_reg;
-		else if(curr_state==ABSORB && next_msg_len >= 16) counter_complete <= counter == 9'h0e; // state change at 0x0f
-		else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len; //next_msg_len+1
-		else if (curr_state==ABSORB_DOWN || curr_state==ABSORB_UP) counter_complete <= counter == 9'h00;
+		else if(curr_state==ABSORB) counter_complete <= counter == 9'h0e; // state change at 0x0f
+		//else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len-1; //next_msg_len+1
 		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h12;
 		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0f;
 		else counter_complete <= counter == 9'hff;
@@ -173,7 +172,8 @@ module XOODYAK(
 		if(~resetn) next_msg_len <= 0;
 		else if (curr_state==LOAD) next_msg_len <= msg_len;
 		// else if (curr_state==IDLE && start_en==1) next_msg_len <= next_msg_len;
-		else if (curr_state==ABSORB_XOODOO && counter_complete==1) next_msg_len <= next_msg_len - 12'h010;
+		else if (curr_state==ABSORB_UP && next_msg_len >= 12'h010) next_msg_len <= next_msg_len - 12'h010;
+		else if (curr_state==ABSORB_UP && next_msg_len < 12'h010) next_msg_len <= 0;
 		else next_msg_len <= next_msg_len;
 	end
 
@@ -195,17 +195,17 @@ module XOODYAK(
 
 	// load msg and rotate msg block
 	always @(posedge clk or negedge resetn) begin
-		if(~resetn) msg_in <= 0;
+		if(~resetn) msg_in <= 0; 
 		else if(load_reg==1) msg_in <= {cur_msg_reg,msg_in[1023:1]}; // feed msg 
-		else if(curr_state==ABSORB) msg_in <= {msg_in[0], msg_in[1023:1]}; // rotate msg 
+		else if(curr_state==ABSORB) msg_in <= {msg_in[1022:0],msg_in[1023]}; // rotate msg 
 		else msg_in <= msg_in;
 	end
 
 	// Create teh Data Block (16 Bytes --> 128 bits)
 	always @(posedge clk or negedge resetn) begin
-			if(~resetn) next_block <= 0;
-			else if (curr_state==ABSORB && next_msg_len >= 16) next_block <= {msg_in[0],next_block[15:1]};
-			else if (curr_state==ABSORB && next_msg_len < 16) next_block <= {((counter == next_msg_len) ? 01 : msg_in[0]),next_block[15:1]};			
+			if(~resetn || curr_state==ABSORB_XOODOO) next_block <= 0;
+			else if (curr_state==ABSORB && next_msg_len >= 16) next_block <= {msg_in[1023],next_block[15:1]};
+			else if (curr_state==ABSORB && next_msg_len < 16) next_block <= {((counter == next_msg_len) ? 01 : msg_in[1023]),next_block[15:1]};			
 			else next_block <= next_block;
 	end	
 	
