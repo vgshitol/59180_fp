@@ -116,7 +116,8 @@ module XOODYAK(
 				EXTRACT:
 				begin
 					$display("EXTRACT");
-					if(counter_complete) curr_state <= SQUEEZE_DOWN;		
+					if(counter_complete && hash_len==31) curr_state <= IDLE;
+					else if(counter_complete) curr_state <= SQUEEZE_DOWN;		
 				end
 				default: begin
 					$display("DEFAULT");
@@ -136,7 +137,7 @@ module XOODYAK(
 		else if(curr_state==ABSORB) counter_complete <= counter == 9'h0e; // state change at 0x0f
 		//else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len-1; //next_msg_len+1
 		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h12;
-		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0f;
+		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
 		else counter_complete <= counter == 9'hff;
 
 		if(curr_state==ABSORB) next_block_ready <= counter == 9'h0f;
@@ -150,13 +151,13 @@ module XOODYAK(
 	always@(posedge clk)
 		begin
 			if(~resetn) valid <= 0;
-			else valid <= !(counter == 9'hff) && curr_state==EXTRACT;
+			else valid <= curr_state==EXTRACT;
 		end
 
 	// Start Enable
 	always@(posedge clk)
 		begin
-			if(~resetn) start_en <= 0;
+			if(~resetn | hash_len==31) start_en <= 0;
 			else start_en <= start_en | start;
 		end	
 
@@ -176,7 +177,6 @@ module XOODYAK(
 		else if (curr_state==ABSORB_UP && next_msg_len < 12'h010) next_msg_len <= 0;
 		else next_msg_len <= next_msg_len;
 	end
-
 
 // *************************************Data Path*************************************** 
 
@@ -223,6 +223,7 @@ module XOODYAK(
 			state_register[383:377] <= state_register[383:377];
 		end
 		else if (curr_state==ABSORB_XOODOO && xoodoo_complete) state_register <= state_in; 
+		else if (curr_state==EXTRACT) state_register[127:0] <= {state_register[7:0],state_register[127:8]};
 		else state_register <= state_register;
 	end
 
@@ -239,5 +240,21 @@ module XOODYAK(
 		else if(curr_state==ABSORB_XOODOO) state_out <= state_register;
 		else state_out <= state_out;
 	end
+
+	// Increase hash len
+	always @(posedge clk or negedge resetn) begin
+		if(~resetn) hash_len <= 0;
+		else if (curr_state==EXTRACT) hash_len <= hash_len + 1;
+		else hash_len <= hash_len;
+	end
+
+	// Output Hash 
+	always @(posedge clk or negedge resetn) begin
+		if(~resetn) hash <= 0;
+		else if (curr_state==EXTRACT) hash <= state_register[7:0];
+		else hash <= hash;
+	end
+
+
 
 endmodule
