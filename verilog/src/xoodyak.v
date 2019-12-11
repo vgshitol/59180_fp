@@ -136,7 +136,7 @@ module XOODYAK(
 		if(curr_state == LOAD) counter_complete <= load_reg;
 		else if(curr_state==ABSORB) counter_complete <= counter == 9'h0e; // state change at 0x0f
 		//else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len-1; //next_msg_len+1
-		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h12;
+		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h16;
 		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
 		else counter_complete <= counter == 9'hff;
 
