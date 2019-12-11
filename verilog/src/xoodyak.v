@@ -80,7 +80,8 @@ module XOODYAK(
 				ABSORB_DOWN:
 				begin
 				 	$display("ABSORB DOWN");
-				 	curr_state <= ABSORB_UP;
+					if(next_msg_len==0) curr_state <= SQUEEZE;
+				 	else curr_state <= ABSORB_UP;
 				end
 				ABSORB_UP:
 				begin
@@ -90,8 +91,7 @@ module XOODYAK(
 				ABSORB_XOODOO:
 				begin
 					$display("ABSORB XOODOO");
-					if(next_msg_len==0 && counter_complete) curr_state <= SQUEEZE;
-					else if(counter_complete) curr_state <= ABSORB;		
+					if(counter_complete) curr_state <= ABSORB;		
 				end
 				SQUEEZE:
 				begin
@@ -206,6 +206,7 @@ module XOODYAK(
 			if(~resetn || curr_state==ABSORB_XOODOO) next_block <= 0;
 			else if (curr_state==ABSORB && next_msg_len >= 16) next_block <= {msg_in[1023],next_block[15:1]};
 			else if (curr_state==ABSORB && next_msg_len < 16) next_block <= {((counter == next_msg_len) ? 01 : msg_in[1023]),next_block[15:1]};			
+			//else if (curr_state==SQUEEZE) next_block <= 8'h01;		
 			else next_block <= next_block;
 	end	
 	
@@ -222,7 +223,12 @@ module XOODYAK(
 			state_register[376] 	<= state_register[376]^c_d;
 			state_register[383:377] <= state_register[383:377];
 		end
+		else if (curr_state==SQUEEZE_DOWN) begin
+			state_register[0]   <= state_register[0]^1;
+			state_register[383:1] <= state_register[383:1];
+		end
 		else if (curr_state==ABSORB_XOODOO && xoodoo_complete) state_register <= state_in; 
+		else if (curr_state==SQUEEZE_XOODOO && xoodoo_complete) state_register <= state_in; 
 		else if (curr_state==EXTRACT) state_register[127:0] <= {state_register[7:0],state_register[127:8]};
 		else state_register <= state_register;
 	end
@@ -237,7 +243,7 @@ module XOODYAK(
 	// Enable XOODOO and run xoodoo with updated vector
 	always @(posedge clk or negedge resetn) begin : proc_
 		if(~resetn) state_out <= 0;
-		else if(curr_state==ABSORB_XOODOO) state_out <= state_register;
+		else if(curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) state_out <= state_register;
 		else state_out <= state_out;
 	end
 
