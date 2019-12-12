@@ -28,6 +28,7 @@ module XOODYAK(
 		SQUEEZE_DOWN 	= 4'd9,
 		EXTRACT  		= 4'd10;
 
+
 	reg [1023:0][7:0] msg_in;
 	
 	reg [3:0] 		curr_state;
@@ -61,65 +62,65 @@ module XOODYAK(
 			case(curr_state)
 				IDLE:
 				begin
-					$display("IDLE");
+			//		$display("IDLE");
 					if (load_reg == 1) curr_state <= LOAD;	
 					if (start_en == 1) curr_state <= ABSORB;
 				end
 				LOAD:
 				begin
-					$display("LOAD");
+			//		$display("LOAD");
 					if (start_en == 1) curr_state <= ABSORB;
 					else if (load_reg == 0) curr_state <= IDLE;
 				end
 				ABSORB:
 				begin
-					$display("ABSORB");
+			//		$display("ABSORB");
 					if (counter_complete == 1) curr_state <= ABSORB_DOWN;
 				end
 				ABSORB_DOWN:
 				begin
-				 	$display("ABSORB DOWN");
+			//	 	$display("ABSORB DOWN");
 					curr_state <= ABSORB_UP;
 				end
 				ABSORB_UP:
 				begin
-					$display("ABSORB UP");
+			//		$display("ABSORB UP");
 					curr_state <= ABSORB_XOODOO;	
 				end 
 				ABSORB_XOODOO:
 				begin
-					$display("ABSORB XOODOO");
+			//		$display("ABSORB XOODOO");
 					if(next_msg_len==0) curr_state <= SQUEEZE;
 				 	else if(counter_complete) curr_state <= ABSORB;		
 				end
 				SQUEEZE:
 				begin
-					$display("SQUEEZE");
+			//		$display("SQUEEZE");
 					curr_state <= SQUEEZE_UP; 
 				end
 				SQUEEZE_DOWN:
 				begin
-				 	$display("SQUEEZE DOWN");
+			//	 	$display("SQUEEZE DOWN");
 				 	curr_state <= SQUEEZE_UP;
 				end
 				SQUEEZE_UP:
 				begin
-					$display("SQUEEZE UP");
+			//		$display("SQUEEZE UP");
 					curr_state <= SQUEEZE_XOODOO;	
 				end 
 				SQUEEZE_XOODOO:
 				begin
-					$display("SQUEEZE XOODOO");
+			//		$display("SQUEEZE XOODOO");
 					if(counter_complete) curr_state <= EXTRACT;		
 				end 
 				EXTRACT:
 				begin
-					$display("EXTRACT");
+			//		$display("EXTRACT");
 					if(counter_complete && hash_len==31) curr_state <= IDLE;
 					else if(counter_complete) curr_state <= SQUEEZE_DOWN;		
 				end
 				default: begin
-					$display("DEFAULT");
+			//		$display("DEFAULT");
 					curr_state <= IDLE;
 				end
 			endcase
@@ -259,7 +260,6 @@ module XOODYAK(
 		else if (curr_state==EXTRACT) hash <= state_register[7:0];
 		else hash <= hash;
 	end
-
 
 
 endmodule

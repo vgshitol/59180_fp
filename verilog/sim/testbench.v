@@ -27,6 +27,22 @@ module Testbench;
 	reg [8191:0] msg_str;
 	reg [255:0] exp_hash_str;
 	reg [255:0] obs_hash_str;
+	reg cmp;
+
+	reg  [255:0] test_vector [0:11] = {
+		256'hEA152F2B47BCE24EFB66C479D4ADF17BD324D806E85FF75EE369EE50DC8F8BD1,
+		256'h27921F8DDF392894460B70B3ED6C091E6421B7D2147DCD6031D7EFEBAD3030CC,
+		256'hDD3F12E89DB41C61D3C05779705FA946A8C69C79EEFDC1B4A966A5F1AB35073D,
+		256'h72ABD350DC287E8C4B95DD37BD796D79F90026C1BD4E0D99D2117BAAB26BC2CA,
+		256'hA13AE46F62E433CE4CAD9E4F24C46F37B6B3815C8539A3659DAAECAAE1AB8FDB,
+		256'h042383068C131A0D365B781DFCB20E855F4A68DE2072AA8D1E16181563D6F622,
+		256'h415D3A751952454C1BB900700A2EB8C2814F0A30C34BC25CC37D3DE96159F4AE,
+		256'h072F0834CC8FE7996E90ADED60228C18791E3A3DA38A3831DA880EDF7869909C,
+		256'hC826D28C7F5BF948FBA9BB5EA028B4E377F1DE86EC5A2A1511BA4D692968EFD5,
+		256'hD926F7E44B263CBA8F98E2A52B7BE175D406A2E81B462408BDBC408784C4284F,
+		256'h98D44061E4D0EED4519061B947FD486B620F9B11CC3F4DF3F219E11E73B04FAD,
+		256'hC23BF64CB9CE397460C685DE83EB40FE1B889CCDFDA5BE5DEA045AFCE30BB065
+	};
 	
 	//generate clock
 	always #(CLOCK_PERIOD/2) clk = ~clk;
@@ -37,7 +53,8 @@ module Testbench;
 	
 	XOODOO dut2 (.clk(clk),.resetn(resetn),.enable_xoodoo(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
 
-	integer i;
+	integer i=0,j=0,k=0;
+	integer file,r;
 		
 	// Drive the testbench
 	initial begin
@@ -48,49 +65,78 @@ module Testbench;
 	   // msg_str = 8192'h000102030405060708090A0B0C0D0E0F101112;
 	 	
 	 	#(10*(CLOCK_PERIOD));
-		
 		resetn=1'b0;
 		#(2*(CLOCK_PERIOD));
 		
 		resetn=1'b1;
 		
 		#(10*(CLOCK_PERIOD));
+		for (j = 0; j < 12; j++) begin
+			/* code */
+			msg_len = j;
+			exp_hash_str = test_vector[j];
+			//#(CLOCK_PERIOD/2);
+			load = 1;
+			for (i=0;i<=j;i=i+1)
+			begin
+				msg=msg_str>>(i + 1023-j)*8;//(MSG_LEN-i-1)*8;
+			//	$display("%d,%d,%x",i,j,msg);
+				#(CLOCK_PERIOD);
+			end
+			load = 0;
 
-		msg_len = MSG_LEN;
-
-		//#(CLOCK_PERIOD/2);
-		load = 1;
-		for (i=0;i<msg_len;i=i+1)
-		begin
-			msg=msg_str>>(i)*8;//(MSG_LEN-i-1)*8;
+			#(5*CLOCK_PERIOD);
+			start = 1;
 			#(CLOCK_PERIOD);
+			start = 0;
+			
+			repeat(3000) begin
+				#((CLOCK_PERIOD));
+			end	
 		end
-		load = 0;
-
-		#(5*CLOCK_PERIOD);
-		start = 1;
-		#(CLOCK_PERIOD);
-		start = 0;
-
-		#(3000*(CLOCK_PERIOD));
 
 		$stop;
 		
 	end
+
+	// initial begin
+	// 	file = $fopen("output.txt","w");
+	// 	if(i) begin 
+	// 		$fwrite(file,"%x\n",   hash);
+	// 		i=0;
+	// 	end
+	// 	$fclose(file);
+	// end
+
 	
+	// Get the output string
 	always@(posedge clk) begin
 		if(~resetn || load) obs_hash_str <= 0;
 		else if(valid==1'b1) begin
-			 $display("VALID HIGH!");
+		//	 $display("VALID HIGH!");
 			 obs_hash_str <= {obs_hash_str[247:0],hash};
 		end
+		else if(obs_hash_str==exp_hash_str) obs_hash_str <= 0;
 		else obs_hash_str <= obs_hash_str;
 	end
 
+
+
+	// get the compare pin high
 	always@(posedge clk) begin
-		if(obs_hash_str==exp_hash_str) begin
+		if(~resetn || load) cmp <= 0;
+		else if(obs_hash_str==exp_hash_str) begin
+			 cmp <= 1;
 			 $display("XOODYAK COMPLETE!");
+			 file = $fopen("output.txt","a");
+			  for (k = 0; k < 32; k++) begin
+				 $fwriteh(file, obs_hash_str[8*(31-k) +: 8]);
+			  end
+			  $fwrite(file,"\n");
+			  $fclose(file);
 		end
+		else if (cmp) cmp <= 0;
+		else cmp <= cmp;
 	end
 
 

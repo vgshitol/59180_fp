@@ -163,7 +163,7 @@ module permute(input clk, resetn, enable_xoodoo, input [0:383] state_in, output 
 		end
 		else if(done_calc == 1'b1 && done_permutations==1'b0) begin
 			done_permutations <= 1'b1;
-			$display("done_permutations	at %0t",$time);
+		//	$display("done_permutations	at %0t",$time);
 		end
 		else begin
 			done_permutations <= 1'b0;
@@ -205,7 +205,7 @@ module permute(input clk, resetn, enable_xoodoo, input [0:383] state_in, output 
 			state_theta_in <= 384'd0;
 		end
 		else if(start == 1'b1 && start_reg==1'b0) begin
-			$display("\nStart so State_theta_in[0:127]=%0h at time=%0t",state_in[0:127],$time);
+		//	$display("\nStart so State_theta_in[0:127]=%0h at time=%0t",state_in[0:127],$time);
 			state_theta_in <= state_in;
 		end
 		else if(start_reg==1'b1 && done_calc==1'b0) begin
