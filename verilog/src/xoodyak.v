@@ -19,21 +19,20 @@ module XOODYAK(
 		IDLE	 		= 4'd0,
 		LOAD 	 		= 4'd1,
 		ABSORB   		= 4'd2,
-		ABSORB_XOODOO   = 4'd4,
-		ABSORB_UP 		= 4'd5,
-		ABSORB_DOWN 	= 4'd6,
-		SQUEEZE  		= 4'd7,
-		SQUEEZE_XOODOO  = 4'd8,
-		SQUEEZE_UP 		= 4'd9,
-		SQUEEZE_DOWN 	= 4'd10,
-		EXTRACT  		= 4'd11;
+		ABSORB_XOODOO   = 4'd3,
+		ABSORB_UP 		= 4'd4,
+		ABSORB_DOWN 	= 4'd5,
+		SQUEEZE  		= 4'd6,
+		SQUEEZE_XOODOO  = 4'd7,
+		SQUEEZE_UP 		= 4'd8,
+		SQUEEZE_DOWN 	= 4'd9,
+		EXTRACT  		= 4'd10;
 
 	reg [1023:0][7:0] msg_in;
 	
 	reg [3:0] 		curr_state;
 	reg 			start_en;
 	reg 			next_block_ready;
-	
 	reg 			counter_complete;
 	reg [8:0] 		counter;
 
@@ -80,8 +79,7 @@ module XOODYAK(
 				ABSORB_DOWN:
 				begin
 				 	$display("ABSORB DOWN");
-					if(next_msg_len==0) curr_state <= SQUEEZE;
-				 	else curr_state <= ABSORB_UP;
+					curr_state <= ABSORB_UP;
 				end
 				ABSORB_UP:
 				begin
@@ -91,7 +89,8 @@ module XOODYAK(
 				ABSORB_XOODOO:
 				begin
 					$display("ABSORB XOODOO");
-					if(counter_complete) curr_state <= ABSORB;		
+					if(next_msg_len==0) curr_state <= SQUEEZE;
+				 	else if(counter_complete) curr_state <= ABSORB;		
 				end
 				SQUEEZE:
 				begin
