@@ -49,11 +49,16 @@ module Testbench;
 	always #(CLOCK_PERIOD/2) clk = ~clk;
 
 	// Instantiate the Unit Under Test (UUT)
-	XOODYAK dut1 (.clk(clk),.resetn(resetn),.start(start),.load(load),.xoodoo_complete(xoodoo_complete),.state_in(state_in),.msg(msg),
-		.msg_len(msg_len),.xoodoo_enable (xoodoo_enable),.state_out(state_out),.hash(hash),.hash_len(hash_len),.valid(valid),.busy(busy));
+	// XOODYAK dut1 (.clk(clk),.resetn(resetn),.start(start),.load(load),.xoodoo_complete(xoodoo_complete),.state_in(state_in),.msg(msg),
+	// 	.msg_len(msg_len),.xoodoo_enable (xoodoo_enable),.state_out(state_out),.hash(hash),.hash_len(hash_len),.valid(valid),.busy(busy));
 	
-	XOODOO dut2 (.clk(clk),.resetn(resetn),.enable_xoodoo(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
+	// XOODOO dut2 (.clk(clk),.resetn(resetn),.enable_xoodoo(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
 
+	// Instantiate the Unit Under Test (UUT)
+	TOP dut (.clk(clk),.resetn(resetn),.start(start),.load(load), 
+		.msg(msg), .msg_len(msg_len), .hash(hash), .valid(valid), .busy(busy)
+	);
+	
 	integer i=0,j=0,k=0;
 	integer file,r;
 		

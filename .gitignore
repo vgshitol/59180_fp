@@ -1,0 +1,4 @@
+work/
+.DS_Store
+verilog/.DS_Store
+verilog/sim/wlf*
