@@ -22,6 +22,7 @@ module Testbench;
 	wire [7:0] hash;
 	wire [7:0] hash_len; 
 	wire valid;
+	wire busy;
 
 	// TB REGISTERS
 	reg [8191:0] msg_str;
@@ -49,7 +50,7 @@ module Testbench;
 
 	// Instantiate the Unit Under Test (UUT)
 	XOODYAK dut1 (.clk(clk),.resetn(resetn),.start(start),.load(load),.xoodoo_complete(xoodoo_complete),.state_in(state_in),.msg(msg),
-		.msg_len(msg_len),.xoodoo_enable (xoodoo_enable),.state_out(state_out),.hash(hash),.hash_len(hash_len),.valid(valid));
+		.msg_len(msg_len),.xoodoo_enable (xoodoo_enable),.state_out(state_out),.hash(hash),.hash_len(hash_len),.valid(valid),.busy(busy));
 	
 	XOODOO dut2 (.clk(clk),.resetn(resetn),.enable_xoodoo(xoodoo_enable),.state_in(state_out),.state_out(state_in),.done_permutations(xoodoo_complete));
 
@@ -76,42 +77,54 @@ module Testbench;
 			msg_len = j;
 			exp_hash_str = test_vector[j];
 			//#(CLOCK_PERIOD/2);
-			load = 1;
-			for (i=0;i<=j;i=i+1)
-			begin
-				msg=msg_str>>(i + 1023-j)*8;//(MSG_LEN-i-1)*8;
-			//	$display("%d,%d,%x",i,j,msg);
-				#(CLOCK_PERIOD);
-			end
-			load = 0;
+			 load = 1;
+			// for (i=0;i<=j;i=i+1)
+			// begin
+			// 	if(~busy) msg=msg_str>>(i + 1023-j)*8;//(MSG_LEN-i-1)*8;
+			// //	$display("%d,%d,%x",i,j,msg);
+			// 	#(CLOCK_PERIOD);
+			// end
+			//#(CLOCK_PERIOD);
+			//load = 0;
+			if(j==0) i = 0;
+			else i = 1;
 
 			#(5*CLOCK_PERIOD);
 			start = 1;
 			#(CLOCK_PERIOD);
 			start = 0;
+
+			while(i <=j ) begin
+				load_msg();
+			end 
 			
-			repeat(3000) begin
+			repeat(300) begin
 				#((CLOCK_PERIOD));
 			end	
+
 		end
 
 		$stop;
 		
 	end
 
-	// initial begin
-	// 	file = $fopen("output.txt","w");
-	// 	if(i) begin 
-	// 		$fwrite(file,"%x\n",   hash);
-	// 		i=0;
-	// 	end
-	// 	$fclose(file);
-	// end
+	task load_msg;
+    begin
+	      if(~busy) begin 
+	      	msg  = msg_str>>(1024-i)*8;
+	      	i = i + 1;
+	      end
+	      else begin
+	      	msg = msg;
+	      	i = i;
+	      end
+	      #((CLOCK_PERIOD));
+    end
+  	endtask
 
-	
 	// Get the output string
 	always@(posedge clk) begin
-		if(~resetn || load) obs_hash_str <= 0;
+		if(~resetn) obs_hash_str <= 0;
 		else if(valid==1'b1) begin
 		//	 $display("VALID HIGH!");
 			 obs_hash_str <= {obs_hash_str[247:0],hash};
@@ -124,7 +137,7 @@ module Testbench;
 
 	// get the compare pin high
 	always@(posedge clk) begin
-		if(~resetn || load) cmp <= 0;
+		if(~resetn) cmp <= 0;
 		else if(obs_hash_str==exp_hash_str) begin
 			 cmp <= 1;
 			 $display("XOODYAK COMPLETE!");
