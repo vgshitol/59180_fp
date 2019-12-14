@@ -28,7 +28,6 @@ module XOODYAK(
 		S_S_X			= 4'd13;
 
 
-//	reg [1023:0][7:0] msg_in;
 	
 	reg [3:0] 		curr_state;
 	reg 			start_en;
@@ -48,11 +47,7 @@ module XOODYAK(
 	reg [11:0] msg_len_reg;
 	reg msg_len_red;
 
-	// xoodoo variables 
-	reg xoodoo_enable;
-	reg xoodoo_complete;
-	reg [383:0] state_in;
-	reg [383:0] state_out;
+
 	
 	//Shlok variables
 	wire [383:0] xoodoo_reversed_state_in = state_register;
@@ -74,7 +69,7 @@ module XOODYAK(
 	
 
 
-`define display_fsm 1
+`define display_fsm 0
 
 	// state machine
 	always @(posedge clk) 
@@ -187,8 +182,8 @@ module XOODYAK(
 		if(curr_state==ABSORB) next_block_ready <= counter == 9'h0f;
 		else next_block_ready <= 0;
 
-		if(curr_state==ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) xoodoo_enable <= counter == 9'h00;
-		else xoodoo_enable <= 0;
+		// if(curr_state==ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) xoodoo_enable <= counter == 9'h00;
+		// else xoodoo_enable <= 0;
 	end	
 
 	// Valid 
@@ -287,69 +282,25 @@ module XOODYAK(
 		else hash <= hash;
 	end
 
-/*
-	// Enable XOODOO and run xoodoo with updated vector
-	always @(posedge clk or negedge resetn) begin : proc_
-		if(~resetn) state_out <= 0;
-		else if(curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) state_out <= state_register;
-		else state_out <= state_out;
-	end
-*/
 
 
 //Shlok Control_In
-	reg done_calc;
 	reg [3:0] rc_count;
-	reg start_reg;
 
-	localparam  [143:0] RC ={
-		12'h58,
-		12'h38,
-		12'h3C0,
-		12'hD0,
-		12'h120,
-		12'h14,
-		12'h60,
-		12'h2C,
-		12'h380,
-		12'hF0,
-		12'h1A0,
-		12'h12
+	localparam  [119:0] RC ={
+		10'h58,
+		10'h38,
+		10'h3C0,
+		10'hD0,
+		10'h120,
+		10'h14,
+		10'h60,
+		10'h2C,
+		10'h380,
+		10'hF0,
+		10'h1A0,
+		10'h12
 	};
-	always@(posedge clk) begin
-		xoodoo_complete <= done_calc;
-	end
-/*
-	always@(posedge clk) begin
-		if(resetn==1'b0) begin
-			rc_count <= 4'd11;
-			start_reg <= 1'b0;
-			$display("Reset rc_count and start_reg");
-		end
-		else if(xoodoo_enable == 1'b1 && start_reg == 1'b0) begin
-			rc_count <= 4'd11;
-			start_reg <= xoodoo_enable;
-			$display("\n\n**********************XOODOO_ENABLE is HIGH**********************\n\n");	
-			$display("Load in state_register to theta_state_in wire");
-		end
-		else if(done_calc==1'b0 && rc_count>0 && start_reg == 1'b1) begin
-			rc_count <= rc_count - 1'b1;
-			$display("Load in state_register to final_state_in wire");
-			// $display("RC_wire=%0h and west_final_state[0:11]=%0h at %0t",rc_wire,I_final_state[0:11],$time);
-		end
-		else begin
-			rc_count <= 4'd11;
-			start_reg <= 1'b0;
-			if(start_reg == 1'b1) $display("Reset start_reg");
-			$display("Reset rc_count as done_calc");
-		end
-		
-		
-		
-		
-	end
-*/
-
 
 
 
@@ -437,18 +388,18 @@ module XOODYAK(
 	//West ends
 	
 	// I starts
-	wire [11:0] reversed_rc_wire;
-	wire [0:11] rc_wire;
-	assign reversed_rc_wire = RC[12*rc_count +:11];
+	wire [9:0] reversed_rc_wire;
+	wire [0:9] rc_wire;
+	assign reversed_rc_wire = RC[10*rc_count +:10];
 	genvar r;
 	generate
-	for(r=0;r<12;r=r+1) begin
+	for(r=0;r<10;r=r+1) begin
 		assign rc_wire[r] = reversed_rc_wire[r];
 	end
 	endgenerate
 	wire [0:383] I_final_state;
-	assign I_final_state[0:11] = west_final_state[0:11] ^ rc_wire[0:11];
-	assign I_final_state[12:383] = west_final_state[12:383];
+	assign I_final_state[0:9] = west_final_state[0:9] ^ rc_wire[0:9];
+	assign I_final_state[10:383] = west_final_state[10:383];
 	
 	// I ends
 	
@@ -511,64 +462,22 @@ module XOODYAK(
 	wire [0:383] next_round_in = east_final_state[0:383];
 	assign xoodoo_state_out = east_final_state[0:383];
 
-/*
-
-
-	always@(posedge clk) begin
-		if(xoodoo_enable == 1'b1 && start_xoodoo==1'b0) begin
-			$display("\nStart so State_theta_in[0:127]=%0h at time=%0t",state_in[0:383],$time);
-			start_xoodoo <= 1'b1;
-			
-		end
-		else if(start_xoodoo==1'b1 && done_calc==1'b0) begin
-			// $display("\n State_theta_in[0:127]=%0h at time=%0t",next_round_in[0:127],$time);
-			state_theta_in <= next_round_in;
-		end
-		
-	end
-*/
-
 	always@(posedge clk) begin
 		if((curr_state == S_A_X) || curr_state == S_S_X) begin
 			rc_count <= 4'd11;
-			start_reg <= 1'b0;
 			$display("RESET DECREMENT COUNTER %d",rc_count);	
 		end
 		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count > 0) begin
 			rc_count <= rc_count - 1'b1;
-			start_reg <= 1'b1;
 			$display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
 		end
 		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count==1'b0) begin
 			rc_count <= 4'd11;
-			start_reg <= 1'b0;
 			$display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
 		end	
 		
 	end
 		
-		
-	always@(posedge clk) begin
-		if(resetn==1'b0) begin
-			done_calc <= 1'b0;
-			$display("Reset done_calc");
-		end
-		else if(xoodoo_enable == 1'b1 && start_reg == 1'b0) begin
-			done_calc <= 1'b0;
-			$display("Reset done_calc");
-		end
-		else if(rc_count == 1'b0 && done_calc==1'b0) begin
-			done_calc <= 1'b1;
-			$display("Set done_calc");
-			//$display("Hardware");
-			//$display("%h\n%h\n%h",next_round_in[0:127],next_round_in[128:255], next_round_in[256:383]);
-			// $display("Done_calc:%b at %0t", done_calc,$time);
-		end
-		else begin
-			done_calc <= 1'b0;
-		//	$display("Reset done_calc");
-		end
 
-	end
 
 endmodule
