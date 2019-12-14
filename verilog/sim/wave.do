@@ -8,23 +8,24 @@ add wave -noupdate /Testbench/dut/msg_len
 add wave -noupdate /Testbench/dut/hash
 add wave -noupdate /Testbench/dut/hash_len
 add wave -noupdate /Testbench/dut/valid
-add wave -noupdate /Testbench/dut/dut2/state_out
-add wave -noupdate /Testbench/dut/dut2/state_in_reversed
-add wave -noupdate /Testbench/dut/dut2/state_in
-add wave -noupdate /Testbench/dut/dut2/resetn
-add wave -noupdate /Testbench/dut/dut2/permute_state_out
-add wave -noupdate /Testbench/dut/dut2/permute_state_in
-add wave -noupdate /Testbench/dut/dut2/permute_done_permutations
-add wave -noupdate /Testbench/dut/dut2/enable_xoodoo
-add wave -noupdate /Testbench/dut/dut2/done_permutations
-add wave -noupdate /Testbench/dut/dut2/clk
 add wave -noupdate /Testbench/obs_hash_str
 add wave -noupdate /Testbench/cmp
+add wave -noupdate /Testbench/dut/dut1/state_register
+add wave -noupdate /Testbench/dut/dut1/xoodoo_state_in
+add wave -noupdate /Testbench/dut/dut1/xoodoo_reversed_state_in
+add wave -noupdate /Testbench/dut/dut1/theta_plane
+add wave -noupdate /Testbench/dut/dut1/theta_final_state
+add wave -noupdate /Testbench/dut/dut1/theta_final_plane
+add wave -noupdate /Testbench/dut/dut1/reversed_rc_wire
+add wave -noupdate /Testbench/dut/dut1/rc_wire
+add wave -noupdate /Testbench/dut/dut1/state_register
+add wave -noupdate /Testbench/dut/dut1/xoodoo_state_out
+add wave -noupdate /Testbench/dut/dut1/xoodoo_reversed_state_out
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {181603678 ps} 0}
+WaveRestoreCursors {{Cursor 1} {950000 ps} 0}
 quietly wave cursor active 1
-configure wave -namecolwidth 432
-configure wave -valuecolwidth 72
+configure wave -namecolwidth 309
+configure wave -valuecolwidth 308
 configure wave -justifyvalue left
 configure wave -signalnamewidth 0
 configure wave -snapdistance 10
@@ -37,4 +38,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {178654865 ps} {187934156 ps}
+WaveRestoreZoom {0 ps} {2440021 ps}
