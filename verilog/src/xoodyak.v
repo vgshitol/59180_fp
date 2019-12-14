@@ -37,15 +37,12 @@ module XOODYAK(
 
 	reg [383:0] 		state_register;
 
-	reg [15:0][7:0] 	next_block; 
-
 	reg [11:0] 		next_msg_len;
 
 	reg c_d;
 
 	reg [7:0] cur_msg_reg;
 	reg [11:0] msg_len_reg;
-	reg msg_len_red;
 
 
 	
@@ -171,7 +168,7 @@ module XOODYAK(
 		else if(curr_state==ABSORB || curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO || curr_state==EXTRACT || curr_state==COMPLETE) counter <= counter + 1;
 		else counter <= counter;
 
-		if(curr_state==ABSORB) counter_complete <= counter == 9'h0e; // state change at 0x0f
+		if(curr_state==ABSORB) counter_complete <= counter == 9'h0f; // state change at 0x0f
 		//else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len-1; //next_msg_len+1
 		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h0a;
 		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
@@ -223,24 +220,22 @@ module XOODYAK(
 		end
 	end
 
-	// Create teh Data Block (16 Bytes --> 128 bits)
-	always @(posedge clk or negedge resetn) begin
-			if(~resetn || curr_state==ABSORB_XOODOO) next_block <= 0;
-			else if (curr_state==ABSORB && next_msg_len >= 16) next_block <= {msg,next_block[15:1]};
-			else if (curr_state==ABSORB && next_msg_len < 16) begin
-				if(counter == next_msg_len) next_block <= {8'h01,next_block[15:1]};
-				else if (counter < next_msg_len) next_block <= {msg,next_block[15:1]};
-				else next_block <= {8'h00,next_block[15:1]};
-			end			
-			//else if (curr_state==SQUEEZE) next_block <= 8'h01;		
-			else next_block <= next_block;
-	end	
 	
 	// Down Operation and Xoodoo complete Update state register  
 	always @(posedge clk or negedge resetn) begin : proc_down
 		if(~resetn || curr_state==COMPLETE) state_register <= 0;
+		else if (curr_state==ABSORB) begin
+	//		state_register[127:0]   <= state_register[127:0]^next_block;
+			if (next_msg_len >= 16 && counter > 00) state_register[127:0] <= {(state_register[7:0]^cur_msg_reg),state_register[127:8]};
+			else if (next_msg_len < 16 &&  counter > 00) begin
+				if(counter == next_msg_len+1) state_register[127:0] <= {(state_register[7:0]^(8'h01)),state_register[127:8]};//next_block <= {8'h01,next_block[15:1]};
+				else if (counter < next_msg_len+1) state_register[127:0] <= {(state_register[7:0]^cur_msg_reg),state_register[127:8]};
+				else state_register[127:0] <= {state_register[7:0],state_register[127:8]};
+			end
+
+		end
 		else if (curr_state==ABSORB_DOWN) begin
-			state_register[127:0]   <= state_register[127:0]^next_block;
+			state_register[127:0]   <= state_register[127:0];
 			
 			if(next_msg_len >= 16 ) state_register[128] <= state_register[128]^1;
 			else state_register[128] <= state_register[128];
