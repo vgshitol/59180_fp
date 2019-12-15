@@ -210,10 +210,8 @@ module XOODYAK(
 	always @(posedge clk or negedge resetn) begin : proc_msg
 		if(~resetn) begin
 			cur_msg_reg <= 0;
-		//	msg_len_reg <= 0;
 		end else begin
 			cur_msg_reg <= msg;
-		//	msg_len_reg <= msg_len;
 		end
 	end
 
@@ -275,30 +273,21 @@ module XOODYAK(
 	end
 
 
-
-//Shlok Control_In
-	reg [3:0] rc_count;
-
-	localparam  [119:0] RC ={
-		10'h58,
-		10'h38,
-		10'h3C0,
-		10'hD0,
-		10'h120,
-		10'h14,
-		10'h60,
-		10'h2C,
-		10'h380,
-		10'hF0,
+	localparam  [119:0] RC ={	
+		10'h12,
 		10'h1A0,
-		10'h12
-	};
+		10'hF0,
+		10'h380,
+		10'h2C,
+		10'h60,
+		10'h14,
+		10'h120,
+		10'hD0,
+		10'h3C0,
+		10'h38,
+		10'h58
+		};
 
-
-
-	
-	
-//Shlok Xoodoo IN
 	
 	// Theta
 	wire [0:127] theta_plane;
@@ -370,8 +359,6 @@ module XOODYAK(
 	wire  [0:127] west_plane_2_final = {west_plane_2_lane_0_z_11,west_plane_2_lane_1_z_11,west_plane_2_lane_2_z_11,west_plane_2_lane_3_z_11};
 	
 	
-	
-	
 	// Output of West
 	wire [0:383] west_final_state;
 	assign west_final_state	[0:127] =  theta_final_state[0:127];
@@ -382,7 +369,7 @@ module XOODYAK(
 	// I starts
 	wire [9:0] reversed_rc_wire;
 	wire [0:9] rc_wire;
-	assign reversed_rc_wire = RC[10*rc_count +:10];
+	assign reversed_rc_wire = RC[10*counter +:10];
 	genvar r;
 	generate
 	for(r=0;r<10;r=r+1) begin
@@ -450,25 +437,10 @@ module XOODYAK(
 	assign east_final_state[128:255] = east_plane_1_final[0:127];
 	assign east_final_state[256:383] = east_plane_2_final[0:127];
 	
-	
 	wire [0:383] next_round_in = east_final_state[0:383];
 	assign xoodoo_state_out = east_final_state[0:383];
 
-	always@(posedge clk) begin
-		if((curr_state == S_A_X) || curr_state == S_S_X) begin
-			rc_count <= 4'd11;
-			// $display("RESET DECREMENT COUNTER %d",rc_count);	
-		end
-		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count > 0) begin
-			rc_count <= rc_count - 1'b1;
-			// $display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
-		end
-		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count==1'b0) begin
-			rc_count <= 4'd11;
-			// $display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
-		end	
-		
-	end
+	
 		
 
 
