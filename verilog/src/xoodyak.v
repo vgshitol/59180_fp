@@ -29,23 +29,18 @@ module XOODYAK(
 
 
 	
-	reg [3:0] 		curr_state;
+	// Internal Registers
 	reg 			start_en;
-	reg 			counter_complete;
+	reg [3:0] 		curr_state;
 	reg [8:0] 		counter;
-
-	reg [383:0] 		state_register;
-
+	reg 			counter_complete;
 	reg [11:0] 		next_msg_len;
-
-	reg c_d;
-
-	reg [7:0] cur_msg_reg;
-	//reg [11:0] msg_len_reg;
-
-
 	
-	//Shlok variables
+	reg 			c_d;
+	reg [7:0] 		cur_msg_reg;
+	reg [383:0] 	state_register;
+
+	//Wires for Xoodoo
 	wire [383:0] xoodoo_reversed_state_in = state_register;
 	wire [0:383] xoodoo_state_in;
 
@@ -57,12 +52,10 @@ module XOODYAK(
 			assign xoodoo_state_in[x] = xoodoo_reversed_state_in[x];
 			assign xoodoo_reversed_state_out[x] = xoodoo_state_out[x];
 		end
-	endgenerate
+	endgenerate	
 
-	
 
 `define display_fsm 0
-
 	// state machine
 	always @(posedge clk) 
 	begin
@@ -149,20 +142,6 @@ module XOODYAK(
 		end
 	end
 
-	// busy status 
-	always @(posedge clk or negedge resetn) begin : proc_busy
-		// if(~resetn || (curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete) || (curr_state==ABSORB && !counter_complete)) begin
-		// 	busy <= 0;
-		// end else begin
-		// 	busy <= 1;
-		// end
-		if((curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete))
-			busy <= 0;
-		else if (curr_state==ABSORB && !(counter >= 9'h0f))
-			busy <= 0;
-		else 
-			busy <= 1;
-	end
 	// Conditional Counter
 	always @(posedge clk or negedge resetn) begin 
 		if(~resetn || counter_complete) counter <= 0;
@@ -170,29 +149,29 @@ module XOODYAK(
 		else counter <= counter;
 
 		if(curr_state==ABSORB) counter_complete <= counter == 9'h0f; // state change at 0x0f
-		//else if(curr_state==ABSORB && next_msg_len < 16) counter_complete <= counter == next_msg_len-1; //next_msg_len+1
 		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h0a;
 		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
 		else if (curr_state==COMPLETE) counter_complete <= counter == 9'h04;
 		else counter_complete <= counter == 9'hff;
-
-		// if(curr_state==ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) xoodoo_enable <= counter == 9'h00;
-		// else xoodoo_enable <= 0;
 	end	
 
-	// Valid 
-	always@(posedge clk)
-		begin
-			if(~resetn) valid <= 0;
-			else valid <= curr_state==EXTRACT;
-		end
-
 	// Start Enable
-	always@(posedge clk)
-		begin
+	always@(posedge clk or negedge resetn) begin
 			if(~resetn | hash_len==31) start_en <= 0;
 			else start_en <= start_en | start;
-		end	
+	end	
+
+	// busy status 
+	always @(posedge clk or negedge resetn) begin : proc_busy
+		if(~resetn || (curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete) || (curr_state==ABSORB && !(counter >= 9'h0f))) busy <= 0;
+		else busy <= 1;
+	end
+
+	// Valid 
+	always@(posedge clk or negedge resetn) begin
+			if(~resetn) valid <= 0;
+			else valid <= curr_state==EXTRACT;
+	end	
 
 	// Reduce the Msg Length 
 	always @(posedge clk or negedge resetn) begin
@@ -208,19 +187,14 @@ module XOODYAK(
 
 	// Register the input msg byte 
 	always @(posedge clk or negedge resetn) begin : proc_msg
-		if(~resetn) begin
-			cur_msg_reg <= 0;
-		end else begin
-			cur_msg_reg <= msg;
-		end
+		if(~resetn) cur_msg_reg <= 0;
+		else cur_msg_reg <= msg;
 	end
-
 	
 	// Down Operation and Xoodoo complete Update state register  
 	always @(posedge clk or negedge resetn) begin : proc_down
 		if(~resetn || curr_state==COMPLETE) state_register <= 0;
 		else if (curr_state==ABSORB) begin
-	//		state_register[127:0]   <= state_register[127:0]^next_block;
 			if (next_msg_len >= 16 && counter > 00) state_register[127:0] <= {(state_register[7:0]^cur_msg_reg),state_register[127:8]};
 			else if (next_msg_len < 16 &&  counter > 00) begin
 				if(counter == next_msg_len+1) state_register[127:0] <= {(state_register[7:0]^(8'h01)),state_register[127:8]};//next_block <= {8'h01,next_block[15:1]};
@@ -256,8 +230,6 @@ module XOODYAK(
 		else c_d <= c_d;
 	end
 
-
-
 	// Increase hash len
 	always @(posedge clk or negedge resetn) begin
 		if(~resetn || curr_state==COMPLETE) hash_len <= 0;
@@ -272,6 +244,8 @@ module XOODYAK(
 		else hash <= hash;
 	end
 
+
+	// XOODOO Operations -- Wiring and Combinational Logic
 
 	localparam  [119:0] RC ={	
 		10'h12,
@@ -439,9 +413,5 @@ module XOODYAK(
 	
 	wire [0:383] next_round_in = east_final_state[0:383];
 	assign xoodoo_state_out = east_final_state[0:383];
-
-	
-		
-
 
 endmodule
