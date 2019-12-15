@@ -31,7 +31,6 @@ module XOODYAK(
 	
 	reg [3:0] 		curr_state;
 	reg 			start_en;
-	reg 			next_block_ready;
 	reg 			counter_complete;
 	reg [8:0] 		counter;
 
@@ -42,7 +41,7 @@ module XOODYAK(
 	reg c_d;
 
 	reg [7:0] cur_msg_reg;
-	reg [11:0] msg_len_reg;
+	//reg [11:0] msg_len_reg;
 
 
 	
@@ -61,10 +60,6 @@ module XOODYAK(
 	endgenerate
 
 	
-		
-	
-	
-
 
 `define display_fsm 0
 
@@ -156,11 +151,17 @@ module XOODYAK(
 
 	// busy status 
 	always @(posedge clk or negedge resetn) begin : proc_busy
-		if(~resetn || (curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete) || curr_state==ABSORB) begin
+		// if(~resetn || (curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete) || (curr_state==ABSORB && !counter_complete)) begin
+		// 	busy <= 0;
+		// end else begin
+		// 	busy <= 1;
+		// end
+		if((curr_state==IDLE && start_en) || (curr_state==ABSORB_XOODOO && counter_complete))
 			busy <= 0;
-		end else begin
+		else if (curr_state==ABSORB && !(counter >= 9'h0f))
+			busy <= 0;
+		else 
 			busy <= 1;
-		end
 	end
 	// Conditional Counter
 	always @(posedge clk or negedge resetn) begin 
@@ -174,10 +175,6 @@ module XOODYAK(
 		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
 		else if (curr_state==COMPLETE) counter_complete <= counter == 9'h04;
 		else counter_complete <= counter == 9'hff;
-
-
-		if(curr_state==ABSORB) next_block_ready <= counter == 9'h0f;
-		else next_block_ready <= 0;
 
 		// if(curr_state==ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) xoodoo_enable <= counter == 9'h00;
 		// else xoodoo_enable <= 0;
@@ -213,10 +210,10 @@ module XOODYAK(
 	always @(posedge clk or negedge resetn) begin : proc_msg
 		if(~resetn) begin
 			cur_msg_reg <= 0;
-			msg_len_reg <= 0;
+		//	msg_len_reg <= 0;
 		end else begin
 			cur_msg_reg <= msg;
-			msg_len_reg <= msg_len;
+		//	msg_len_reg <= msg_len;
 		end
 	end
 
@@ -460,15 +457,15 @@ module XOODYAK(
 	always@(posedge clk) begin
 		if((curr_state == S_A_X) || curr_state == S_S_X) begin
 			rc_count <= 4'd11;
-			$display("RESET DECREMENT COUNTER %d",rc_count);	
+			// $display("RESET DECREMENT COUNTER %d",rc_count);	
 		end
 		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count > 0) begin
 			rc_count <= rc_count - 1'b1;
-			$display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
+			// $display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
 		end
 		else if((curr_state == ABSORB_XOODOO || curr_state == SQUEEZE_XOODOO) && rc_count==1'b0) begin
 			rc_count <= 4'd11;
-			$display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
+			// $display("DECREMENT COUNTER %d and values is %h",rc_count, reversed_rc_wire);	
 		end	
 		
 	end
