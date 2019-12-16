@@ -72,7 +72,7 @@ module Testbench;
 	always #(CLOCK_PERIOD/2) clk = ~clk;
 
 	// Instantiate the Unit Under Test (UUT)
-	TOP dut (.clk(clk),.resetn(resetn),.start(start), .msg(msg), .msg_len(msg_len), 
+	XOODYAK dut (.clk(clk),.resetn(resetn),.start(start), .msg(msg), .msg_len(msg_len), 
 		.hash(hash), .hash_len(hash_len), .valid(valid), .busy(busy));
 	
 	integer i=0,j=0,k=0;
