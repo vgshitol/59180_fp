@@ -19,19 +19,16 @@ module XOODYAK(
 		ABSORB_UP 		= 4'd3,
 		SQUEEZE  		= 4'd4,
 		SQUEEZE_XOODOO  = 4'd5,
-		SQUEEZE_UP 		= 4'd6,
 		EXTRACT  		= 4'd7,
-		COMPLETE  		= 4'd8,
-		S_A_X			= 4'd9;
+		COMPLETE  		= 4'd8;
 	
 	// Internal Registers
 	reg [3:0] 		curr_state;
-	reg [8:0] 		counter;
+	reg [4:0] 		counter;
 	reg 			counter_complete;
 	reg [11:0] 		next_msg_len;
 	
 	reg 			c_d;
-	reg [7:0] 		cur_msg_reg;
 	reg [383:0] 	state_register;
 
 	//Wires for Xoodoo
@@ -68,19 +65,10 @@ module XOODYAK(
 				ABSORB:
 				begin
 					if(`display_fsm) $display("ABSORB");
-					if (counter_complete == 1) curr_state <= ABSORB_UP;
-				end
-				ABSORB_UP:
-				begin
-					if(`display_fsm) $display("ABSORB UP");
-					curr_state <= S_A_X;	
-				end 
-				S_A_X:
-				begin
-					if(`display_fsm) $display("Before XOODOO");
-					if(next_msg_len==0) curr_state <= SQUEEZE_UP;
-				 	else curr_state <= ABSORB_XOODOO;		
-				end				
+
+					if(counter_complete && next_msg_len <= 12'h010) curr_state <= SQUEEZE_XOODOO;
+					else if (counter_complete) curr_state <= ABSORB_XOODOO;
+				end	
 				ABSORB_XOODOO:
 				begin
 					if(`display_fsm) $display("ABSORB XOODOO");
@@ -89,13 +77,8 @@ module XOODYAK(
 				SQUEEZE:
 				begin
 					if(`display_fsm) $display("SQUEEZE");
-					curr_state <= SQUEEZE_UP; 
+					curr_state <= SQUEEZE_XOODOO; 
 				end
-				SQUEEZE_UP:
-				begin
-					if(`display_fsm) $display("SQUEEZE UP");
-					curr_state <= SQUEEZE_XOODOO;	
-				end 	
 				SQUEEZE_XOODOO:
 				begin
 					if(`display_fsm) $display("SQUEEZE XOODOO");
@@ -127,16 +110,16 @@ module XOODYAK(
 		else if(curr_state==ABSORB || curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO || curr_state==EXTRACT || curr_state==COMPLETE) counter <= counter + 1;
 		else counter <= counter;
 
-		if(curr_state==ABSORB) counter_complete <= counter == 9'h0f; // state change at 0x0f
-		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 9'h0a;
-		else if (curr_state==EXTRACT) counter_complete <= counter == 9'h0e;
-		else if (curr_state==COMPLETE) counter_complete <= counter == 9'h04;
-		else counter_complete <= counter == 9'hff;
+		if(curr_state==ABSORB) counter_complete <= counter == 5'h0e; // state change at 0x0f
+		else if (curr_state==ABSORB_XOODOO || curr_state==SQUEEZE_XOODOO) counter_complete <= counter == 5'h0a;
+		else if (curr_state==EXTRACT) counter_complete <= counter == 5'h0e;
+		else if (curr_state==COMPLETE) counter_complete <= counter == 5'h04;
+		else counter_complete <= counter_complete;
 	end	
 
 	// busy status 
 	always @(posedge clk or negedge resetn) begin : proc_busy
-		if(~resetn || (curr_state==IDLE && start) || (curr_state==ABSORB_XOODOO && counter_complete) || (curr_state==ABSORB && !(counter >= 9'h0f))) busy <= 0;
+		if(~resetn || (curr_state==IDLE && start) || (curr_state==ABSORB_XOODOO && counter_complete) || (curr_state==ABSORB && !(counter >= 5'h0f))) busy <= 0;
 		else busy <= 1;
 	end
 
@@ -150,35 +133,38 @@ module XOODYAK(
 	always @(posedge clk or negedge resetn) begin
 		if(~resetn) next_msg_len <= 0;
 		else if (curr_state==IDLE) next_msg_len <= msg_len;
-		else if (curr_state==ABSORB_UP && next_msg_len >= 12'h010) next_msg_len <= next_msg_len - 12'h010;
-		else if (curr_state==ABSORB_UP && next_msg_len < 12'h010) next_msg_len <= 0;
+		else if (curr_state==ABSORB && next_msg_len >= 12'h010 && counter_complete) next_msg_len <= next_msg_len - 12'h010;
+		else if (curr_state==ABSORB && next_msg_len < 12'h010 && counter_complete) next_msg_len <= 0;
 		else next_msg_len <= next_msg_len;
 	end
 
 // *************************************Data Path*************************************** 
 
-	// Register the input msg byte 
-	always @(posedge clk or negedge resetn) begin : proc_msg
-		if(~resetn) cur_msg_reg <= 0;
-		else cur_msg_reg <= msg;
-	end
+	// // Register the input msg byte 
+	// always @(posedge clk or negedge resetn) begin : proc_msg
+	// 	if(~resetn) cur_msg_reg <= 0;
+	// 	else cur_msg_reg <= msg;
+	// end
 	
 	// Down Operation and Xoodoo complete Update state register  
 	always @(posedge clk or negedge resetn) begin : proc_down
 		if(~resetn || curr_state==COMPLETE) state_register <= 0;
 		else if (curr_state==ABSORB) begin
-			if (next_msg_len >= 16 && counter > 00) state_register[127:0] <= {(state_register[7:0]^cur_msg_reg),state_register[127:8]};
-			else if (next_msg_len < 16 &&  counter > 00) begin
-				if(counter == next_msg_len+1) state_register[127:0] <= {(state_register[7:0]^(8'h01)),state_register[127:8]};//next_block <= {8'h01,next_block[15:1]};
-				else if (counter < next_msg_len+1) state_register[127:0] <= {(state_register[7:0]^cur_msg_reg),state_register[127:8]};
+			if (next_msg_len >= 16) state_register[127:0] <= {(state_register[7:0]^msg),state_register[127:8]};
+			else if (next_msg_len < 16) begin
+				if(counter == next_msg_len) state_register[127:0] <= {(state_register[7:0]^(8'h01)),state_register[127:8]};//next_block <= {8'h01,next_block[15:1]};
+				else if (counter < next_msg_len) state_register[127:0] <= {(state_register[7:0]^msg),state_register[127:8]};
 				else state_register[127:0] <= {state_register[7:0],state_register[127:8]};
 			end
 
-			if(counter==9'h0f && next_msg_len >= 16) state_register[128] <= state_register[128]^1;
+			if(counter==5'h01 && next_msg_len >= 16) state_register[128] <= state_register[128]^1;
 			else state_register[128] <= state_register[128];
 
 			state_register[375:129] <= state_register[375:129];
-			state_register[376] 	<= state_register[376]^c_d;
+			
+			if(counter==5'h01) state_register[376] <= state_register[376]^c_d;
+			else state_register[376] <= state_register[376];
+
 			state_register[383:377] <= state_register[383:377];
 		end
 		else if (curr_state==SQUEEZE) begin
@@ -193,7 +179,7 @@ module XOODYAK(
 	// C_D Update
 	always @(posedge clk or negedge resetn) begin : proc_c_d
 		if(~resetn || curr_state==COMPLETE) c_d <= 1;
-		else if (curr_state==ABSORB_UP) c_d <= 0;
+		else if ((curr_state==ABSORB_XOODOO && counter_complete) || curr_state==SQUEEZE_XOODOO) c_d <= 0;
 		else c_d <= c_d;
 	end
 
